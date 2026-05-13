@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاور هوشمند بیمه</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+        }
+
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #quiz-container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        button:hover {
+            border-color: var(--primary-color);
+            background-color: #eff6ff;
+        }
+
+        .back-btn {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #64748b;
+            border: none;
+            background: none;
+            text-decoration: underline;
+        }
+
+        .result-card {
+            text-align: right;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="question-box">
+        <div class="question-text" id="question-text">در حال بارگذاری...</div>
+        <div class="options-container" id="options-container"></div>
+        <button class="back-btn hidden" id="back-btn" onclick="goBack()">بازگشت به سوال قبل</button>
+    </div>
+
+    <div id="result-box" class="hidden">
+        <h2 style="color: var(--primary-color);">تحلیل هوش مصنوعی:</h2>
+        <div id="result-content" class="result-card"></div>
+        <button onclick="location.reload()" style="margin-top: 20px; background: var(--primary-color); color: white;">شروع مجدد</button>
+    </div>
+</div>
+
+<script>
+    // ساختار درختی سوالات (Logic Tree)
+    const quizData = {
+        start: {
+            text: "قصد بیمه کردن چه موردی را دارید؟",
+            options: [
+                { text: "سلامت و درمان", next: "health_1" },
+                { text: "عمر و سرمایه‌گذاری", next: "life_1" },
+                { text: "خودرو (شخص ثالث و بدنه)", next: "car_1" }
+            ]
+        },
+        // شاخه درمان
+        health_1: {
+            text: "آیا در حال حاضر بیمه پایه (تامین اجتماعی یا سلامت) دارید؟",
+            options: [
+                { text: "بله، دارم", next: "health_2" },
+                { text: "خیر، ندارم", next: "health_2" }
+            ]
+        },
+        health_2: {
+            text: "اولویت اصلی شما در پوشش‌های درمانی چیست؟",
+            options: [
+                { text: "هزینه‌های بستری و جراحی", next: "profile" },
+                { text: "دندانپزشکی و عینک", next: "profile" },
+                { text: "زایمان و ناباروری", next: "profile" }
+            ]
+        },
+        // شاخه عمر
+        life_1: {
+            text: "هدف اصلی شما از خرید بیمه عمر چیست؟",
+            options: [
+                { text: "سرمایه‌گذاری و دریافت وام", next: "life_2" },
+                { text: "پوشش بیماری‌های خاص و ازکارافتادگی", next: "life_2" }
+            ]
+        },
+        life_2: {
+            text: "توان پرداخت سالانه شما در چه بازه‌ای است؟",
+            options: [
+                { text: "کمتر از ۵ میلیون تومان", next: "profile" },
+                { text: "بین ۵ تا ۱۵ میلیون تومان", next: "profile" },
+                { text: "بالای ۱۵ میلیون تومان", next: "profile" }
+            ]
+        },
+        // شاخه خودرو
+        car_1: {
+            text: "کدام پوشش برای شما اولویت دارد؟",
+            options: [
+                { text: "شخص ثالث (اجباری)", next: "car_2" },
+                { text: "بیمه بدنه (خسارت خودروی من)", next: "car_2" }
+            ]
+        },
+        car_2: {
+            text: "در انتخاب شرکت بیمه، کدام مورد مهم‌تر است؟",
+            options: [
+                { text: "ارزان‌ترین قیمت بازار", next: "profile" },
+                { text: "تعداد بالای مراکز پرداخت خسارت", next: "profile" }
+            ]
+        },
+        // پروفایل نهایی
+        profile: {
+            text: "بازه سنی خود را انتخاب کنید:",
+            options: [
+                { text: "۱۸ تا ۳۵ سال", next: "finish" },
+                { text: "۳۶ تا ۵۵ سال", next: "finish" },
+                { text: "بالای ۵۵ سال", next: "finish" }
+            ]
+        }
+    };
+
+    let history = [];
+    let currentStep = 'start';
+    let userAnswers = [];
+
+    function renderStep(stepKey) {
+        const step = quizData[stepKey];
+        const container = document.getElementById('options-container');
+        const questionText = document.getElementById('question-text');
+        const backBtn = document.getElementById('back-btn');
+
+        // نمایش دکمه بازگشت
+        if (history.length > 0) backBtn.classList.remove('hidden');
+        else backBtn.classList.add('hidden');
+
+        questionText.innerText = step.text;
+        container.innerHTML = '';
+
+        step.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt.text;
+            btn.onclick = () => handleChoice(opt.text, opt.next);
+            container.appendChild(btn);
+        });
+    }
+
+    function handleChoice(text, nextStep) {
+        userAnswers.push(text);
+        history.push(currentStep);
+
+        if (nextStep === 'finish') {
+            showResult();
+        } else {
+            currentStep = nextStep;
+            renderStep(currentStep);
+        }
+    }
+
+    function goBack() {
+        if (history.length > 0) {
+            currentStep = history.pop();
+            userAnswers.pop();
+            renderStep(currentStep);
+        }
+    }
+
+    async function showResult() {
+        // نمایش حالت در حال بارگذاری
+        document.getElementById('question-box').classList.add('hidden');
+        document.getElementById('result-box').classList.remove('hidden');
+        const resultContent = document.getElementById('result-content');
+        resultContent.innerHTML = "در حال تحلیل پاسخ‌های شما توسط هوش مصنوعی... لطفاً شکیبا باشید.";
+
+        // ۱. آماده‌سازی داده‌ها
+        const payload = {
+            answers: userAnswers,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            // ۲. ارسال داده به n8n (آدرس وبهوک خود را اینجا جایگزین کنید)
+            const response = await fetch('https://work.mohsenn8n.ir/webhook-test/insurance-consultant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error('خطا در برقراری ارتباط با سرور');
+
+            const data = await response.json();
+
+            // ۳. نمایش پاسخ دریافتی از n8n/هوش مصنوعی
+            // فرض می‌کنیم n8n فیلدی به نام output یا text برمی‌گرداند
+            resultContent.innerHTML = `
+                <div style="white-space: pre-line;">
+                    ${data.output || data.response || JSON.stringify(data)}
+                </div>
+            `;
+
+        } catch (error) {
+            resultContent.innerHTML = "متأسفانه مشکلی در اتصال به هوش مصنوعی پیش آمد. لطفاً دوباره تلاش کنید.";
+            console.error('Error:', error);
+        }
+    }
+
+    // شروع برنامه
+    renderStep('start');
+</script>
+
+</body>
+</html>
