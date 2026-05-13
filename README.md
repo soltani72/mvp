@@ -1,2 +1,0 @@
-# mvp
-my mvp products
